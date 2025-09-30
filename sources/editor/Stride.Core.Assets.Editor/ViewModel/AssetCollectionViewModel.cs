@@ -594,7 +594,8 @@ namespace Stride.Core.Assets.Editor.ViewModel
             [
                 Tr._p("Button", "Yes"),
                 Tr._p("Button", "No"),
-                Tr._p("Button", "Yes to all")
+                Tr._p("Button", "Yes to all"),
+                Tr._p("Button", "No to all")
             ]
             :
             [
@@ -626,6 +627,9 @@ namespace Stride.Core.Assets.Editor.ViewModel
 
                         if (copyResult is 0 or 2)
                             continue;
+
+                        if (copyResult is 4)
+                            break;
 
                         finalPath = await GetAssetCopyDirectory(directory, file);
                     }
