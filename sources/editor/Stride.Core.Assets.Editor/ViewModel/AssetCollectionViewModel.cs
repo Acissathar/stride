@@ -560,10 +560,10 @@ namespace Stride.Core.Assets.Editor.ViewModel
             {
                 while (true)
                 {
-                   var filePath = await Dialogs.SaveFilePickerAsync(
-                       Path.GetFullPath(directory.Package.Package.ResourceFolders[0].FullPath),
-                       [new FilePickerFilter("") { Patterns = [file.GetFileExtension()]}],
-                       defaultFileName: file.GetFileName());
+                    var filePath = await Dialogs.SaveFilePickerAsync(
+                        Path.GetFullPath(directory.Package.Package.ResourceFolders[0].FullPath),
+                        [new FilePickerFilter("") { Patterns = [file.GetFileExtension()] }],
+                        defaultFileName: file.GetFileName());
 
                     // If the user closes the dialog, assume that they want to use the default directory
                     if (filePath is null)
@@ -590,12 +590,24 @@ namespace Stride.Core.Assets.Editor.ViewModel
         private async Task<List<AssetViewModel>> InvokeAddAssetTemplate(LoggerResult logger, string name, DirectoryBaseViewModel directory, TemplateAssetDescription templateDescription, [CanBeNull] IList<UFile> files, PropertyContainer? customParameters)
         {
             List<AssetViewModel> newAssets = new List<AssetViewModel>();
-            IReadOnlyList<DialogButtonInfo> buttons = DialogHelper.CreateButtons(files is not null && files.Count > 1 ?
+            IReadOnlyList<DialogButtonInfo> copyPromptButtons = DialogHelper.CreateButtons(files is not null && files.Count > 1 ?
             [
                 Tr._p("Button", "Yes"),
                 Tr._p("Button", "No"),
                 Tr._p("Button", "Yes to all"),
                 Tr._p("Button", "No to all")
+            ]
+            :
+            [
+                Tr._p("Button", "Yes"),
+                Tr._p("Button", "No")
+            ], 1, 2);
+
+            IReadOnlyList<DialogButtonInfo> overwritePromptButtons = DialogHelper.CreateButtons(files is not null && files.Count > 1 ?
+            [
+                Tr._p("Button", "Yes"),
+                Tr._p("Button", "No"),
+                Tr._p("Button", "Yes to all")
             ]
             :
             [
@@ -618,16 +630,18 @@ namespace Stride.Core.Assets.Editor.ViewModel
                         continue;
 
                     if (!yesToAll)
-                    {  
+                    {
                         var message = Tr._p("Message", "Source file '{0}' is not inside of your project's resource folders, do you want to copy it?").ToFormat(file.FullPath);
 
-                        var copyResult = await Dialogs.MessageBoxAsync(message, buttons, MessageBoxImage.Warning);
+                        var copyResult = await Dialogs.MessageBoxAsync(message, copyPromptButtons, MessageBoxImage.Warning);
 
                         yesToAll = copyResult is 3;
 
+                        // If no or close, skip this file
                         if (copyResult is 0 or 2)
                             continue;
 
+                        // If "No to all", abort the entire copy process
                         if (copyResult is 4)
                             break;
 
@@ -635,7 +649,7 @@ namespace Stride.Core.Assets.Editor.ViewModel
                     }
                     else
                     {
-                        // If the user selected Yes to all, we're going to assume they want to use the same directory as the initial file.
+                        // If "Yes to all" we're going to assume they want to use the same directory as the initial file.
                         finalPath = Path.Combine(Path.GetDirectoryName(finalPath), file.GetFileName());
                     }
 
@@ -648,7 +662,7 @@ namespace Stride.Core.Assets.Editor.ViewModel
                             {
                                 var message = Tr._p("Message", "The file '{0}' already exists, it will get overwritten if you continue, do you really want to proceed?").ToFormat(finalPath);
 
-                                var copyResult = await Dialogs.MessageBoxAsync(message, buttons, MessageBoxImage.Warning);
+                                var copyResult = await Dialogs.MessageBoxAsync(message, overwritePromptButtons, MessageBoxImage.Warning);
 
                                 overwriteAll = copyResult is 3;
 
@@ -1191,11 +1205,11 @@ namespace Stride.Core.Assets.Editor.ViewModel
             {
                 if (filter.IsReadOnly)
                     continue; // Skip engine defined filters
-                
+
                 AssetFilterViewModelData obj = new AssetFilterViewModelData
                 {
-                    DisplayName = filter.DisplayName, 
-                    Filter = filter.Filter, 
+                    DisplayName = filter.DisplayName,
+                    Filter = filter.Filter,
                     IsActive = filter.IsActive,
                     category = filter.Category
                 };
